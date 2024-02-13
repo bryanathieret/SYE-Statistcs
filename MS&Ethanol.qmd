@@ -1,0 +1,219 @@
+---
+title: "MS360 and Voluntary Ethanol Consumption"
+author: "Bryana A.S. Thieret"
+format: html
+---
+
+
+```{r echo =FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+Throughout this analysis, a balance must be met between violating assumptions of normality, independence, and small sample size
+
+Throughout this analysis, I have tried to create a balance between 
+
+
+
+This meta-analysis consists of using data that violates almost all basic assumption of general statistical methods and will require and use uncommon methods to do so. 
+
+
+
+
+
+This data has been mostly given in medians and has been indicated in the articles as doing so because of the violations of normality (i.e., probability density functions are not normally distributed). Instead of converting the medians into means when we indeed have been told there are violations in the basic assumptions, we will use an approach that instead uses medians as the summary statistic throughout this meta-analysis. Measures of variability are often given in Median Absolute Deviation (MAD) 
+
+
+### Problems:  
+
+* Non-independent data  
+* Doing a meta-analysis is multilevel in itself  
+* Trend over time is important  
+* Most of the studies are 3 groups (not so simple to do median difference)  
+* Summary statistics are given in mostly median and MAD  
+* Each study is over a period of time and the time is not the exact same (do I aggregate this by week?)  
+* Males and females are known to have differences (who actually knows) but not all of these data sets are males or females  
+
+
+
+
+## Dependent Measure  
+
+* Intake of Ethanol mg/kg/session  
+
+
+
+
+## Articles  
+
+### Comasco et al., 2015:  
+
+* Summary statistics given: Median, Min, Max  
+* Rats had access to ethanol three days a week 
+
+```{r}
+# Table S2: 
+Comasco2015 = tibble::tibble(
+  "Week" = c(1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6),
+  "Group" = c("AFR", "AFR", "AFR", "AFR", "AFR", "AFR", "MS15", "MS15", "MS15", "MS15", "MS15", "MS15", "MS360", "MS360", "MS360", "MS360", "MS360", "MS360"),
+  "Ethanol_Percentage" = c(5, 5, 20, 20, 20, 20, 5, 5, 20, 20, 20, 20, 5, 5, 20, 20, 20, 20),
+  "Access_Hours" = c(24, 2, 2, 2, 2, 2, 24, 2, 2, 2, 2, 2, 24, 2, 2, 2, 2, 2),
+  "Median" = c(1.61, 0.40, 1.10, 1.21, 1.37, 1.18, 1.89, 0.67, 1.12, 1.49, 1.23, 1.32, 1.53, 0.57, 1.20, 1.11, 1.28, 1.32),
+  "Lower" = c(0.29, 0.18, 0.50, 0.59, 0.77, 0.62, 0.87, 0.32, 0.75, 0.89, 1.05, 0.39, 0.21, 0.09, 0.29, 0.56, 0.38, 0.60),
+  "Upper" = c(4.16, 0.75, 2.11, 1.42, 2.08, 1.66, 3.40, 0.99, 1.61, 2.13, 1.74, 1.77, 3.28, 1.14, 1.98, 2.15, 2.52, 2.05),
+  "n" = c(11, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 20),
+  "Sessions" = c(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3))
+```
+
+#### Transformation-Based Approach: Method of Wan et al. (McGrath et al., 2018)  
+
+* I have the median, maximum, minimum, and number of subjects  
+
+$$\bar{x}_{ij} \approx \frac{a_{ij} + 2y_{ij} +b_{ij}}{4}$$  
+
+where $a_{ij} = minimum$, $b_{ij} = maximum$, $n_{ij} = subjects$
+
+
+* Wan et al. also explains that if n $\leq$ 15 that the following formula should be used for estimating standard deviation,  
+
+$$S_{ij} \approx \frac{1}{\sqrt{12}} \left[ (b-a)^2 + \frac{(a-2m+b)^2}{4} \right]^{\frac{1}{2}}$$
+
+
+```{r}
+Comasco2015 |> mutate(
+  Estimated_Mean = (Lower + 2*Median + Upper)/4,
+  Estimated_sd = 1/sqrt(12) * ((Upper - Lower)^2 + (Lower - 2*Median + Upper)^2/4)^(1/2))
+```
+
+
+### Gustafsson & Nylander, 2006  
+
+* Summary statistics given: individual points from plots   
+* AFR = 13, MS15 = 15, MS360 = 25  
+
+
+```{r}
+GN2006 <- read_excel("G&N2006.xlsx")
+GN2006 |> mutate()
+
+
+GN2006 = GN2006 |> 
+  group_by(Phase, Group, Ethanol_Percentage) |> 
+  summarise(Mean = mean(Ethanol_Intake),
+            SD = sd(Ethanol_Intake))
+```
+
+
+### Ploj et al., 2003  
+
+* Summary statistics: Mean and SD by concentration from plots  
+
+
+
+
+### Oreland et al., 2011  
+
+* Summary statistics: Q1, Median, and Q3 from plots  
+
+
+
+
+### Gustafsson et al., 2007  
+
+* 
+
+
+### Daoura et al., 2011  
+
+* Summary statistics: Median and IQR **Negative values?**  
+
+
+```{r}
+Daoura2011 = tibble::tibble(
+  "Group" = c("MS0", "MS0", "MS0", "MS0", "MS0",
+              "MS15", "MS15", "MS15", "MS15", "MS15",
+              "MS360", "MS360", "MS360", "MS360", "MS360"),
+  "Week" = c(1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5),
+  "Median" = c(1.97, 1.71, 2.08, 2.58, 1.74, 
+               1.64, 1.75, 1.73, 1.84, 1.83,
+               1.69, 1.90, 1.62, 2.40, 2.72),
+  "IQR" = c(1.14, 2.27, 1.83, 2.35, 1.79,
+            1.11, 2.42, 1.59, 1.85, 1.49,
+            0.58, 1.63, 2.36, 2.14, 1.67)
+)
+
+Daoura2011 |> mutate(
+  "Q1" = Median - IQR,
+  "Q3" = Median + IQR
+)
+
+```
+
+
+
+### Roman et al., 2004  
+
+* Summary statistics: Median and MAD  
+* Dependent measure: Intake (g/kg/day)
+
+2% = 4 days  
+4% = 4 days  
+6% = 7 days  
+8% = 10 days  
+
+```{r}
+# Table 1:
+Roman2014 = tibble::tibble(
+  "Group" = c("MS15", "MS15", "MS15", "MS15", 
+               "AFR", "AFR", "AFR", "AFR",
+               "MS360", "MS360", "MS360", "MS360"),
+  "Median" = c(103.5, 104.3, 104.4, 103.0, 
+               127.7, 114.7, 106.2, 109.9,
+               127.4, 137.3, 123.5, 118.4),
+  "MAD" = c(11.6, 9.3, 7.1, 13.2, 
+            9.8, 17.6, 5.4, 15.9,
+            24.9, 18.7, 17.1, 15.7),
+  "Ethnaonl_Percentage" = c(2, 4, 6, 8, 
+                            2, 4, 6, 8,
+                            2, 4, 6, 8),
+  "Access_Hours" = c(24, 24, 24, 24, 
+                     24, 24, 24, 24, 
+                     24, 24, 24, 24),
+  "Sessions" = c(4, 4, 7, 10, 
+                 4, 4, 7, 10, 
+                 4, 4, 7, 10),
+  "n" = c(8, 8, 8, 8, 
+          8, 8, 8, 8,
+          8, 8, 8, 8)
+  )
+```
+
+
+#### Conversion of MAD to SD: (Adekeye, 2012)  
+
+
+$\hat{\sigma} = b_n MAD$
+
+* when n = 8, $b_n = 1.129$  
+
+```{r}
+Roman2014 |> mutate(
+  Estimate_SD = MAD * 1.129
+)
+```
+
+
+
+
+
+
+
+
+References   
+
+
+
+
+
+

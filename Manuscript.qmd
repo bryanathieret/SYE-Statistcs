@@ -1,0 +1,22 @@
+---
+title: "Ethanol Intake Following Maternal Separation: A Meta-Analysis Using Bayesian Methods"
+shorttitle: "Ethanol Intake and MS"
+author:
+  - name: Bryana A.S. Thieret
+    corresponding: true
+    orcid: 0000-0002-8393-5316
+    email: bathie20@stlawu.edu
+    affiliations:
+      - name: St. Lawrence University
+        department: Department of Psychology and Statistics
+abstract: "This is my abstract."
+keywords: [keyword1, keyword2]
+author-note:
+  disclosures:
+    conflict of interest: The author has no conflict of interest to declare.
+theme: journal
+---
+
+
+
+

@@ -1,0 +1,16 @@
+---
+title: "Nonlinear Modeling: Examples"
+author: "Bryana A.S. Thieret"
+format: html
+---
+
+
+
+# Exponential  
+
+```{r}
+nlm()
+```
+
+
+
