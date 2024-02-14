@@ -90,18 +90,42 @@ Comasco2015 |> mutate(
 ### Gustafsson & Nylander, 2006  
 
 * Summary statistics given: individual points from plots   
+* Total Ethanol Intake kg/day  
+* four bottle voluntary choice procedure  
+* Intake for each animal calculated every 3 days  
 * AFR = 13, MS15 = 15, MS360 = 25  
 
 
 ```{r}
-GN2006 <- read_excel("G&N2006.xlsx")
-GN2006 |> mutate()
+GN2006 = tibble::tibble(
+  "Group" = c("MS15", "MS15", "MS15", 
+              "MS360", "MS360", "MS360",
+              "AFR", "AFR", "AFR"),
+  "Period" = c("1-18", "1-18", "1-18", "19-36", "19-36", "19-36", "37-54", "37-54", "37-54"),
+  "Sessions" = c(18, 18, 18, 18, 18, 18, 18, 18, 18),
+  "Median" = c(0.75, 1.03, 1.13, 0.68, 1.04, 0.95, 0.63, 0.95, 0.84),
+  "MAD" = c(0.15, 0.32, 0.33, 0.17, 0.39, 0.41, 0.19, 0.34, 0.25),
+  "Access_Hours" = c(24, 24, 24, 24, 24, 24, 24, 24, 24),
+  "n" = c(15, 15, 15, 25, 25, 25, 13, 13, 13)
+)
+```
 
 
-GN2006 = GN2006 |> 
-  group_by(Phase, Group, Ethanol_Percentage) |> 
-  summarise(Mean = mean(Ethanol_Intake),
-            SD = sd(Ethanol_Intake))
+
+$$\hat{\sigma} = b_n MAD$$
+* where $b_{15} = 1.056$, $b_{25} = 1.033$, and $b_{13} = 1.066$  
+
+
+
+
+```{r}
+GN2006 |> mutate(
+  Estimate_sd = case_when(
+    n > 15 & n != 15 ~ MAD*1.033,
+    n = 15 & n == 15 ~ MAD*1.056,
+    n < 15 & n !=15 ~ MAD*1.066
+  )
+)
 ```
 
 
@@ -164,7 +188,7 @@ Daoura2011 |> mutate(
 
 ```{r}
 # Table 1:
-Roman2014 = tibble::tibble(
+Roman2004 = tibble::tibble(
   "Group" = c("MS15", "MS15", "MS15", "MS15", 
                "AFR", "AFR", "AFR", "AFR",
                "MS360", "MS360", "MS360", "MS360"),
@@ -198,7 +222,7 @@ $\hat{\sigma} = b_n MAD$
 * when n = 8, $b_n = 1.129$  
 
 ```{r}
-Roman2014 |> mutate(
+Roman2004 |> mutate(
   Estimate_SD = MAD * 1.129
 )
 ```

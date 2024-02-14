@@ -4,18 +4,63 @@ shorttitle: "Ethanol Intake and MS"
 author:
   - name: Bryana A.S. Thieret
     corresponding: true
-    orcid: 0000-0002-8393-5316
     email: bathie20@stlawu.edu
     affiliations:
       - name: St. Lawrence University
         department: Department of Psychology and Statistics
 abstract: "This is my abstract."
-keywords: [keyword1, keyword2]
+keywords: [maternal separation, early-life stress, ethanol consumption]
 author-note:
   disclosures:
     conflict of interest: The author has no conflict of interest to declare.
-theme: journal
+format:
+  apaquarto-html: default
 ---
+
+ Human research in epidemiology shows ELS increases risk for chronic physical (D. W. Brown et al., 2009; Campbell et al., 2016; Chapman et al., 2011; Chokshi, 2018; Dube et al., 2009; Wise, 2016), mental illness (Carbone et al., 2019; Cheong et al., 2017; Duncan et al., 2017; Ljungqvist et al., 2016; Ridley et al., 2020; van der Feltz-Cornelis et al., 2019; Walker & Druss, 2017), and addiction (Dube et al., 2003; Loudermilk et al., 2018; Sharman et al., 2019; Shin et al., 2018; Strine, 2012). The reasons to do animal model research is to understand the causal relationship between two variables, but in cases where results are mixed, no conclusion can be made as to that relationship. Doing meta-analyses have allowed for a better understanding of a specific scope of research through the use of effect size, but in cases where there are already violations of using a Normal distribution this causes a "garbage in, garbage out" result (Harrer et al., 2021). 
+
+Maternal Separation (MS) is one of the most popular animal models for early-life stress (ELS) compared to other animal models for ELS (e.g., limited bedding and nesting, maternal deprivation). 
+  
+  Animal models for ELS 
+  
+  Consensus within any ELS paradigm 
+
+
+
+# Methods  
+
+
+## Trend Meta-Analysis  
+  
+
+## Deriving Mean and Variance
+
+  The majority of articles report their summary statistics as either median and IQR1 and IQR3 or median and median absolute deviation (MAD), which will require an estimated conversion to mean and variance. I will also acknowledge that often median and MAD is given in cases where $N(0,1)$ is not observed, but the problem is that median and MAD are not parameters of any known distribution. This is not an uncommon problem for those conducting meta-analyses to encounter which has created a plethora of well validated statistical methods of estimating mean and variance from limited summary statistics information given within an article. 
+
+In cases where both median and IQR1 and IQR3 are given I used 
+
+Adekeye (2012) extended their previous work Adekeye (2008) by establishing a way of estimating standard deviation from MAD when data is non-normal through modification of the control limits for the Shewhart $\bar{X}$ and S control chart using concepts of three sigma limits (Rocke, 1989). 
+
+
+
+
+
+
+
+
+# References  
+
+Harrer, M., Cuijpers, P., Furukawa, T.A., & Ebert, D.D. (2021). Doing Meta-Analysis with R: A Hands-On Guide. Boca Raton, FL and London: Chapman & Hall/CRC Press. ISBN 978-0-367-61007-4.  
+
+
+
+
+
+
+
+
+
+
 
 
 
