@@ -111,22 +111,59 @@ GN2006 = tibble::tibble(
 ```
 
 
+### Deriving Mean and Variance from Median and MAD (Adekeye, 2012)    
+
+
+
+
+
+
+
 
 $$\hat{\sigma} = b_n MAD$$
 * where $b_{15} = 1.056$, $b_{25} = 1.033$, and $b_{13} = 1.066$  
+
+Control limits for estimating standard deviation:  
+
+$$UCL_S = B_4 b_n MAD \\
+CL_S = b_n MAD \\
+LCL_S = B_5 b_n MAD
+$$
+
+Control limits for estimating mean:  
+
+$$UCL = \overline{\overline{X}} + A_6 MAD \\
+CL = \overline{\overline{X}} \\
+LCU = \overline{\overline{X}} - A_6 MAD$$
+
+
+Taken from a Factors for Control Limits Chart:  
+
+```{r}
+ControlLimits = tibble("n" = c(15, 13, 25),
+       "b_n" = c(1.056, 1.066, 1.033),
+       "B_4" = c(1.572, 1.618, 1.435),
+       "B_5" = c(0.421, 0.374, 0.559),
+       "A_6" = c(0.8180, 0.8870, 0.6198))
+```
 
 
 
 
 ```{r}
-GN2006 |> mutate(
-  Estimate_sd = case_when(
-    n > 15 & n != 15 ~ MAD*1.033,
-    n = 15 & n == 15 ~ MAD*1.056,
-    n < 15 & n !=15 ~ MAD*1.066
-  )
+GN2006 = left_join(GN2006, ControlLimits, by = "n")
+
+GN2006 = GN2006 |> mutate(
+  Estimated_sd = MAD*b_n,
+  UCL_S = B_4*b_n*MAD,
+  LCL_S = B_5*b_n*MAD
+  
 )
 ```
+
+
+
+
 
 
 ### Ploj et al., 2003  

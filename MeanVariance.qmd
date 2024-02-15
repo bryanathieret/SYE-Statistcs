@@ -1,0 +1,42 @@
+---
+title: "Deriving Mean and Variance from Median and MAD"
+author: "Bryana A.S. Thieret"
+format: html
+---
+
+## Methods from Adekeye et al., 2012  
+
+
+$$\hat{\sigma} = b_n \overline{MAD}$$  
+ * where $b_n$ is a function of the sample size n.  
+
+ $$\overline{MAD} = \frac{1}{m} \sum_{j = 1}^m MAD_j$$
+ 
+ $$MAD_j = 1.4826[ Median |X_{ij} - MD_j| \:]$$ 
+ $$MD_j = Median(X_{ij})$$
+ 
+ $X_{ij}$ represents a random sample of size n taken over m subgroups.  
+ 
+ * Control limits for specifically monitoring past data should use,
+ 
+ $$ UCL_S = B_4 b_n \overline{MAD} \\
+ CL_S = C_4 b_n \overline{MAD} \\
+ $$
+ 
+ 
+ 
+ 
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+

@@ -17,13 +17,14 @@ format:
   apaquarto-html: default
 ---
 
- Human research in epidemiology shows ELS increases risk for chronic physical (D. W. Brown et al., 2009; Campbell et al., 2016; Chapman et al., 2011; Chokshi, 2018; Dube et al., 2009; Wise, 2016), mental illness (Carbone et al., 2019; Cheong et al., 2017; Duncan et al., 2017; Ljungqvist et al., 2016; Ridley et al., 2020; van der Feltz-Cornelis et al., 2019; Walker & Druss, 2017), and addiction (Dube et al., 2003; Loudermilk et al., 2018; Sharman et al., 2019; Shin et al., 2018; Strine, 2012). The reasons to do animal model research is to understand the causal relationship between two variables, but in cases where results are mixed, no conclusion can be made as to that relationship. Doing meta-analyses have allowed for a better understanding of a specific scope of research through the use of effect size, but in cases where there are already violations of using a Normal distribution this causes a "garbage in, garbage out" result (Harrer et al., 2021). 
-
-Maternal Separation (MS) is one of the most popular animal models for early-life stress (ELS) compared to other animal models for ELS (e.g., limited bedding and nesting, maternal deprivation). 
+  Epidemiology human research shows ELS increases risk for chronic physical illness (D. W. Brown et al., 2009; Campbell et al., 2016; Chapman et al., 2011; Chokshi, 2018; Dube et al., 2009; Wise, 2016), mental illness (Carbone et al., 2019; Cheong et al., 2017; Duncan et al., 2017; Ljungqvist et al., 2016; Ridley et al., 2020; van der Feltz-Cornelis et al., 2019; Walker & Druss, 2017), and addiction (Dube et al., 2003; Loudermilk et al., 2018; Sharman et al., 2019; Shin et al., 2018; Strine, 2012). Animal model research provides an understanding of the causal relationship between two variables, but in cases where results are mixed, no reliable conclusion can be made as to that relationship.  
   
-  Animal models for ELS 
+  Meta-analyses have allowed for a better understanding of a specific scope of research when results are mixed through the use of effect size, but in cases where there are already violations of using a Normal distribution this causes a "garbage in, garbage out" result (Harrer et al., 2021). Most psychology animal model research evaluates groups of animals over time on a specific dependent measure which creates data that is repeated measures (i.e., observations are not independent of one another) requiring advanced statistical methods to account for the within-subject correlated data (i.e., multilevel modeling). Not accounting for the repeated measures aspects of a data set results in increased type 1 error due to the independence that is assumed for each observation when a linear model or ANOVA is conducted (CITATION HERE). The replication crisis is unsurprising to hear of because it is more common than not to encounter violations of statistical methodology. Violating assumptions of statistical tests are not always avoidable, and in those cases results should be presented in a way that acknowledges those limitations properly and adequately. 
   
-  Consensus within any ELS paradigm 
+  Maternal Separation (MS) is one of the most popular animal models for early-life stress (ELS) compared to other animal models (e.g., limited bedding and nesting, maternal deprivation, etc.,). MS involves separating the pups from the dam for a period of time each day during early life for an extended period of time. Separation time along with the period of postnatal days (PNDs) differs based on lab protocol but the most common amounts of time daily separation consists of is 180 or 360 minutes and most commonly lasts from PND 1-14 or from PND 1-21 (i.e., weaning). When evaluating measures of impulsivity within or across different paradigm of ELS, there is little to no consensus as to if ELS increases or decreases impulsive-like behavior. When deciding to evaluate an impulsivity measure within a specific paradigm it was essential to have enough studies to compare to one another that use the relatively same methodology. This resulted in the conclusion of doing a meta-analysis focusing on MS with the dependent measure being ethanol intake/consumption. Unsurprisingly, even though the methodology of most of these studies was exactly the same, results are completely mixed with some showing increases in ethanol consumption and other showing decreases in ethanol consumption.  
+  
+  There are many challenges with conducting a meta-analysis with this data, or any data resembling this framework, due to the multitude of general violations form the data in combination with the importance of trend over time. 
+  
 
 
 
@@ -31,6 +32,12 @@ Maternal Separation (MS) is one of the most popular animal models for early-life
 
 
 ## Trend Meta-Analysis  
+  
+  Peters and Mengersen (2008) outlined a method of how to do a meta-analysis when there is repeated measures present and the variable of interest is over time terming the method as *trend meta-analysis*. Trend meta-analysis uses a Bayesian model (Equation 1) to create a study specific regression analysis where the means and slope estimates can be combined across studies.
+  
+$$y_{it} \sim N(\theta_{it}, \sigma^{2}_{it}) \quad \alpha_i \sim N(0, 100000) \\ \theta_{it} = \alpha_i + \beta_{i} \cdot time_{it} \quad \mu \sim N(0, 100000) \\ \beta_{i} \sim N(\mu, \tau^2) \quad \tau \sim N(0, 100), \: \tau >0 $$
+    
+  This method requires only mean and variance.  
   
 
 ## Deriving Mean and Variance

@@ -1,0 +1,17 @@
+---
+title: "Ethanol Intake Following Maternal Separation: Supplemental Material"
+shorttitle: "MS and Ethanol Intake Supplemental Materials"
+author:
+  - name: Bryana A.S. Thieret
+    corresponding: true
+    email: bathie20@stlawu.edu
+    affiliations:
+      - name: St. Lawrence University
+        department: Department of Psychology and Statistics
+author-note:
+  disclosures:
+    conflict of interest: The author has no conflict of interest to declare.
+format:
+  apaquarto-html: default
+---
+
