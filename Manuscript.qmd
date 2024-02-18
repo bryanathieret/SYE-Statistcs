@@ -17,37 +17,96 @@ format:
   apaquarto-html: default
 ---
 
-  Epidemiology human research shows ELS increases risk for chronic physical illness (D. W. Brown et al., 2009; Campbell et al., 2016; Chapman et al., 2011; Chokshi, 2018; Dube et al., 2009; Wise, 2016), mental illness (Carbone et al., 2019; Cheong et al., 2017; Duncan et al., 2017; Ljungqvist et al., 2016; Ridley et al., 2020; van der Feltz-Cornelis et al., 2019; Walker & Druss, 2017), and addiction (Dube et al., 2003; Loudermilk et al., 2018; Sharman et al., 2019; Shin et al., 2018; Strine, 2012). Animal model research provides an understanding of the causal relationship between two variables, but in cases where results are mixed, no reliable conclusion can be made as to that relationship.  
+
+  Meta-analyses have allowed for a better understanding of a specific scope of research when results are mixed through the use of effect size, but in cases where there are already violations of using a Normal distribution this causes a "garbage in, garbage out" result (Harrer et al., 2021). Most psychology animal model research evaluates groups of animals over time on specific dependent measures which creates data that is repeated measures (i.e., observations are not independent of one another) requiring advanced statistical methods to account for the within-subject correlated data (i.e., multilevel modeling). 
   
-  Meta-analyses have allowed for a better understanding of a specific scope of research when results are mixed through the use of effect size, but in cases where there are already violations of using a Normal distribution this causes a "garbage in, garbage out" result (Harrer et al., 2021). Most psychology animal model research evaluates groups of animals over time on a specific dependent measure which creates data that is repeated measures (i.e., observations are not independent of one another) requiring advanced statistical methods to account for the within-subject correlated data (i.e., multilevel modeling). Not accounting for the repeated measures aspects of a data set results in increased type 1 error due to the independence that is assumed for each observation when a linear model or ANOVA is conducted (CITATION HERE). The replication crisis is unsurprising to hear of because it is more common than not to encounter violations of statistical methodology. Violating assumptions of statistical tests are not always avoidable, and in those cases results should be presented in a way that acknowledges those limitations properly and adequately. 
   
-  Maternal Separation (MS) is one of the most popular animal models for early-life stress (ELS) compared to other animal models (e.g., limited bedding and nesting, maternal deprivation, etc.,). MS involves separating the pups from the dam for a period of time each day during early life for an extended period of time. Separation time along with the period of postnatal days (PNDs) differs based on lab protocol but the most common amounts of time daily separation consists of is 180 or 360 minutes and most commonly lasts from PND 1-14 or from PND 1-21 (i.e., weaning). When evaluating measures of impulsivity within or across different paradigm of ELS, there is little to no consensus as to if ELS increases or decreases impulsive-like behavior. When deciding to evaluate an impulsivity measure within a specific paradigm it was essential to have enough studies to compare to one another that use the relatively same methodology. This resulted in the conclusion of doing a meta-analysis focusing on MS with the dependent measure being ethanol intake/consumption. Unsurprisingly, even though the methodology of most of these studies was exactly the same, results are completely mixed with some showing increases in ethanol consumption and other showing decreases in ethanol consumption.  
+  Not accounting for the repeated measures aspects of a data set results in increased type 1 error due to the independence that is assumed for each observation when a linear model or ANOVA is conducted (CITATION HERE). Violating assumptions of statistical tests are not always avoidable, and in those cases results should be presented in a way that acknowledges those limitations properly and adequately. In the majority of cases, the results of statistical models, especially p-values, are presented in ways that do not acknowledge the limitations from the statistical tests given the violations of the tests used. In addition, null-hypothesis testing has created a research culture where only small p-values matter which led statistic journals to banish the use of p-values in ________ (CITE). 
+
+
+  Animal model research provides an understanding of the causal relationship between two variables, but in cases where results are mixed, no reliable conclusion can be made as to that relationship. When evaluating measures of impulsivity within or across different paradigms of ELS, there is little to no consensus as to if ELS increases or decreases impulsive-like behavior. When deciding to evaluate an impulsivity measure within a specific paradigm, it was essential to have enough studies to compare to one another that use the relatively same methodology. This resulted in the conclusion of doing a meta-analysis focusing on MS with the dependent measure being ethanol intake/consumption.
   
-  There are many challenges with conducting a meta-analysis with this data, or any data resembling this framework, due to the multitude of general violations form the data in combination with the importance of trend over time. 
   
+  Maternal Separation (MS) is one of the most popular animal models for early-life stress (ELS) compared to other animal models (e.g., limited bedding and nesting, maternal deprivation, etc.,). MS involves separating the pups from the dam for a period of time each day during early life for an extended period of time. Separation time along with for the postnatal day (PND) period differs based on lab protocol, but the most common amount of time daily separation consists of is 180 or 360 minutes and most commonly lasts from either PND 1-14 or from PND 1-21 (i.e., weaning). 
+  
+  
+  There are many challenges with conducting a meta-analysis with this data, or any data resembling this framework, due to the multitude of general violations form the data in combination with the importance of trend over time. Specifically within the MS model, authors often report that ethanol intake does not follow a Normal distribution which results in nonparametric testing. Data does not need to follow a Normal distribution to do statistical tests that use the Normal distribution, but what should be noted is there are metrics of a statistical model that should be evaluated for goodness-of-fit where violations would provide evidence needed to do different modeling (e.g., linearity, normality for residuals, and equal variance of residuals). Nonparametric testing resembles t-tests where in cases appropriate they can be helpful, but they ultimately are not informative as to potential interaction effects and only inform if there is a "difference" between groups. To be clear, nonparametric testing is not appropriate in this case, or with any data of this type, because it violates the assumption of independence which leads to higher type 1 error.  
+  
+  
+  This meta-analysis using Bayesian methods hopes to clear up the mixed effects found for ethanol consumption within the MS model. Data has either been provided, taken through figure plots through PlotDigitization, or through tables/text (Orhan & Yasmin, 2022). 
 
 
 
 # Methods  
 
+  
+  There have been 19 studies conducted evaluating ethanol consumption/intake in MS models. To further parse these articles, articles were grouped by PND period (i.e., when separation occurred) in addition to the amount of time separation happened daily during this same period. Exclusion criteria consisted of the rodents not being an outbred strain (e.g., genetically modified strain), ethanol being mixed with sucrose/saccharin either as a primer to induce consumption of ethanol or continued during testing, and forced intake of ethanol either before to induce intake or during testing, testing occurring during the adulthood period (> PND 60).
+  
+  This process led the 19 studies to be narrowed down to 9 where MS occurred between PND 1-21 and the separation lasting for 360 minutes, or 6 hours, each day within this period. These 9 articles were further narrowed to 7 after discovering 2 studies exclusively reported median and median absolute deviation (MAD) both in text, tables, and figure. 
+  
+  It should be noted that median and MAD are not summary statistics that should be reported by themselves in journal articles because they are not parameters of any known distribution. There is little a person can do with median and nothing that can be done with MAD as a measure of variability and as the creator of the summary statistic MAD, Hampel (1974) described the uses which MAD is appropriate as the following: needing a scale estimate where no higher accuracy is required, a check for further computations, baseline for rejection of outliers and as a starting point for iterative or one-step procedures in cases to build other robust estimators.  
+  
+  Of the 7 articles, 1 article reported median and minimum/maximum value, 1 article require PlotDigitization where median and IQR1/IQR3 was acquired, 1 article reported median and IQR, 1 article required PlotDigitization of the exact values from each rat, 1 article required PlotDigitization where mean and SEM was acquired, and 1 article that sent me their full data set when requested.    
+
 
 ## Trend Meta-Analysis  
   
-  Peters and Mengersen (2008) outlined a method of how to do a meta-analysis when there is repeated measures present and the variable of interest is over time terming the method as *trend meta-analysis*. Trend meta-analysis uses a Bayesian model (Equation 1) to create a study specific regression analysis where the means and slope estimates can be combined across studies.
+  Peters and Mengersen (2008) outlined a method of how to do a meta-analysis when there is repeated measures present and the variable of interest is over time terming the method as *trend meta-analysis*. Trend meta-analysis uses a Bayesian model (Equation 1) to create a study specific regression analysis where the means and slope estimates can be combined across studies. Importantly, this method can be done with only mean and variance.  
   
-$$y_{it} \sim N(\theta_{it}, \sigma^{2}_{it}) \quad \alpha_i \sim N(0, 100000) \\ \theta_{it} = \alpha_i + \beta_{i} \cdot time_{it} \quad \mu \sim N(0, 100000) \\ \beta_{i} \sim N(\mu, \tau^2) \quad \tau \sim N(0, 100), \: \tau >0 $$
+  
+$$y_{it} \sim N(\theta_{it}, \sigma^{2}_{it}) \quad \alpha_i \sim N(0, 100000) \\ \theta_{it} = \alpha_i + \beta_{i} \cdot time_{it} \quad \mu \sim N(0, 100000) \\ \beta_{i} \sim N(\mu, \tau^2) \quad \tau \sim N(0, 100), \: \tau >0 $$   
+
+
+### Deriving Mean and Variance  
+
+
+  As mentioned, the majority of summary statistics provided were given as median along with some type of deviation measure (e.g., IQR1, IQR3, IQR, minimum value, maximum value). A few approaches will be taken with this data to not narrow our ability to understand the different dimension of this data, but one of those methods includes the importance of trend over time. Wan et al. (2014) improved upon the methods both Hozo et al. (2005) and Bland et al. (2014) used to derive mean and standard deviation from median to specifically accommodate for smaller sample sizes and non-normal data.  
+  
+When only minimum (*a*), median (*m*), and maximum (*b*) values are provided, mean ($\bar{x}$) and standard deviation (SD) was estimated through Equation 2. 
+
+
+
+
+
+
+
+
+
+## Table 1  
+###  
++------------------------------------------+:--------------------------------------------------------:+:------------------------------------------------------------------------------------------------------------------------------------------------------------------------:+
+| Summary Statistics                       | $\approx \bar{x}$                                        | $\approx s$                                                                                                                                                              |
++==========================================+:========================================================:+:========================================================================================================================================================================:+
+| $a, b, m, n$                             | $\frac{a+2\cdot m + b}{4}$                               | $\frac{b - a}{2 \cdot \Phi^{-1} \left( \frac{n - 0.375}{n + 0.25} \right)}$                                                                                              |
+|                                          |                                                          |                                                                                                                                                                          |
++------------------------------------------+:--------------------------------------------------------:+:------------------------------------------------------------------------------------------------------------------------------------------------------------------------:+
+| $a, q_1, m, q_3, b, n$                   | $\frac{a + 2 \cdot q_1 + 2 \cdot m + 2 \cdot q_3 + b}{}$ | $\frac{b - a}{2 \cdot \Phi^{-1} \left( \frac{n - 0.375}{n + 0.25} \right)} + \frac{q_3 - q_1}{4 \cdot \Phi^{-1} \left( \frac{0.75 \cdot n - 0.125}{n + 0.25} \right) }$  |
++------------------------------------------+:--------------------------------------------------------:+:------------------------------------------------------------------------------------------------------------------------------------------------------------------------:+
+
+
+
+Estimated_Mean = ((Minimum + 2*IQR1 + 2*Median + 2*IQR3 + Maximum)/8),
+  Estimated_SD = (((Maximum - Minimum)/(4*qnorm((n-0.375)/(n+0.25)))) + ((IQR3-IQR1)/(4*qnorm((0.75*n-0.125)/(n+0.25))))),
+
+
+
+## Difference in Medians  
+  
+  McGrath et al. (2018) proposed 
+
+
+
+
+
+
+
+
+
+
+
     
-  This method requires only mean and variance.  
+ 
   
-
-## Deriving Mean and Variance
-
-  The majority of articles report their summary statistics as either median and IQR1 and IQR3 or median and median absolute deviation (MAD), which will require an estimated conversion to mean and variance. I will also acknowledge that often median and MAD is given in cases where $N(0,1)$ is not observed, but the problem is that median and MAD are not parameters of any known distribution. This is not an uncommon problem for those conducting meta-analyses to encounter which has created a plethora of well validated statistical methods of estimating mean and variance from limited summary statistics information given within an article. 
-
-In cases where both median and IQR1 and IQR3 are given I used 
-
-Adekeye (2012) extended their previous work Adekeye (2008) by establishing a way of estimating standard deviation from MAD when data is non-normal through modification of the control limits for the Shewhart $\bar{X}$ and S control chart using concepts of three sigma limits (Rocke, 1989). 
-
 
 
 

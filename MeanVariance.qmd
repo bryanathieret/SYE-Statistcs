@@ -4,31 +4,164 @@ author: "Bryana A.S. Thieret"
 format: html
 ---
 
-## Methods from Adekeye et al., 2012  
+
+# Wan et al., 2018  
 
 
-$$\hat{\sigma} = b_n \overline{MAD}$$  
- * where $b_n$ is a function of the sample size n.  
+$a$ = the minimum value  
+$q_1$ = the first quartile  
+$m$ = median  
+$q_3$ = the third quartile  
+$b$ = the maximum value  
+$n$ = sample size  
 
- $$\overline{MAD} = \frac{1}{m} \sum_{j = 1}^m MAD_j$$
- 
- $$MAD_j = 1.4826[ Median |X_{ij} - MD_j| \:]$$ 
- $$MD_j = Median(X_{ij})$$
- 
- $X_{ij}$ represents a random sample of size n taken over m subgroups.  
- 
- * Control limits for specifically monitoring past data should use,
- 
- $$ UCL_S = B_4 b_n \overline{MAD} \\
- CL_S = C_4 b_n \overline{MAD} \\
- $$
- 
- 
- 
- 
+* The three frequently encountered scenarios are:  
 
-    
-    
+$$C_1 = \{a, m, b, n \}, \quad \\
+C_2 = \{a, q_1, m, q_3, b, n \}, \quad \\
+C_3 = \{q_1, m, q_3, n \}$$
+
+
+## Scenario $C_1$
+
+### Estimated Mean  
+
+$$LB_1 \leq \bar{X} \leq UB_1$$
+$$LB_1 = \frac{a+m}{2} + \frac{2-1-m}{2n}$$
+
+$$UB_1 = \frac{m+b}{2} + \frac{2a-m-b}{2n}$$
+
+$$\bar{X} \approx \frac{LB_1 + UB_1}{2}$$
+
+### Estimated SD  
+
+* Let $Z_1, ..., Z_n$ be independent and identically distributed (i.i.d.) random variables from the standard normal distribution $N(0,1)$ and $Z_{1} \leq ... \leq Z_{n}$ be the ordered statistics of $Z_1, ..., Z_n$.  
+* Then, 
+
+$$X_i = \mu + \sigma Z_i, \quad  \\
+X_{(i)} = \mu + \sigma Z_{(i)}, \quad \\
+a = \mu + \sigma Z_{(1)}, \quad \\
+b = \mu + \sigma Z_{(n)} $$ 
+
+* for i = 1, ..., n  
+
+$$\xi (n) = 2E(Z_{(n)}) $$
+
+$$S \approx \frac{b - a}{\xi(n)}$$
+
+
+
+$$E(Z_{(n)}) = n \int_{-\infty}^{\infty} z[\Phi (z)]^{n-1} \phi (z) dz $$
+
+* where the probability density function is, 
+
+$$ \phi(z) = \frac{1}{\sqrt{2 \pi}} e^{-z^2/2} $$
+
+ * and the cumulative distribution function is
+
+$$ \Phi(z) = \int_{-\infty}^z \phi(t)dt $$
+
+
+```{r}
+# C1 formula for SD
+a = 0.29
+b = 4.16
+n = 11
+(b - a)/(2 * qnorm((n-0.375)/(n+0.25)))
+
+```
+
+
+
+## Scenario $C_2$  
+
+### Estimating Mean  
+
+$$LB_2 \leq \bar{X} \leq UB_2  $$
+
+$$LB_2 = \frac{a+q_1 + m+q_3}{4} + \frac{4b-a-q_1-m-q_3}{4n}$$
+
+$$UB_2 = \frac{q_1+m+q_3+b}{4} + \frac{4a-q_1-m-q_3-b}{4n}$$
+
+$$ \bar{X} \approx \frac{LB_2+UB_2}{2}$$
+
+### Estimated SD  
+
+$$S \approx \frac{1}{2} \left( \frac{b-a}{\xi(n)} + \frac{q_3 - q_1}{\eta (n)}  \right)$$
+
+
+$$\eta (n) = 2E(Z_{(3Q+1)})$$
+
+* which is the expected value of $Z_{(3Q+1)}$ is,
+
+$$E(Z_{(3Q+1)}) = \frac{(4Q+1)!}{(Q)!(3Q)!} \int_{-\infty}^{\infty} z[\Phi(z)]^{3Q} [1-\Phi(z)]^Q \phi(z) dz $$
+
+
+$$\eta(n) = 2E(Z_{(3Q+1)})$$
+
+* for Q $\leq$ 50. 
+
+$$n = 4Q + 1, \\
+Q = \frac{(n-1)}{4}$$
+
+
+
+```{r}
+# C2 formula for SD
+Maximum = 2.16
+Minimum = 0.453
+IQR1 = 0.511
+IQR3 = 0.815
+n = 19
+
+((Maximum - Minimum)/(4*qnorm((n-0.375)/(n+0.25)))) + ((IQR3-IQR1)/(4*qnorm((0.75*n-0.125)/(n+0.25))))
+```
+
+
+
+
+Table with calculated $\xi(n)$ and $\eta (n)$
+
+
+```{r precalculated values}
+values = tibble::tibble(
+  "n" = c(1:50),
+  "xi(n)" = c(0, 1.128, 1.693, 2.059, 2.326, 2.534, 2.704, 2.847, 2.970, 3.078, 
+              3.173, 3.259, 3.336, 3.407, 3.472, 3.532, 3.588, 3.640, 3.689, 3.735, 
+              3.778, 3.819, 3.858, 3.895, 3.931, 3.964, 3.997, 4.027, 4.057, 4.086,
+              4.113, 4.139, 4.165, 4.189, 4.213, 4.236, 4.259, 4.280, 4.301, 4.322,
+              4.341, 4.361, 4.379, 4.398, 4.415, 4.433, 4.450, 4.466, 4.482, 4.498),
+  "Q" = c(1:50),
+  "eta(n)" = c(0.990, 1.144, 1.206, 1.239, 1.260, 1.274, 1.284, 1.292, 1.298, 1.303,
+               1.307, 1.311, 1.313, 1.316, 1.318, 1.320, 1.322, 1.323, 1.324, 1.326,
+               1.327, 1.328, 1.329, 1.330, 1.330, 1.331, 1.332, 1.332, 1.333, 1.333,
+               1.334, 1.334, 1.335, 1.335, 1.336, 1.336, 1.336, 1.337, 1.337, 1.337, 
+               1.338, 1.338, 1.338, 1.338, 1.339, 1.339, 1.339, 1.339, 1.339, 1.340)
+)
+```
+
+
+## Scenario $C_3$  
+
+### Esimated Mean  
+
+$$ \bar{X} \approx \frac{q_1 + m + q_3}{3}$$
+
+### Estimated SD  
+
+$$S \approx \frac{q_3 - q_1}{\eta(n)}$$
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

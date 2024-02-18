@@ -1,60 +1,16 @@
 ---
-title: "MS360 and Voluntary Ethanol Consumption"
+title: "Bayes Methods"
 author: "Bryana A.S. Thieret"
 format: html
 ---
 
 
-```{r echo =FALSE, message=FALSE, warning=FALSE}
+```{r warning=FALSE, output=FALSE}
 library(tidyverse)
 library(readxl)
-```
 
+############################################################
 
-Throughout this analysis, a balance must be met between violating assumptions of normality, independence, and small sample size
-
-Throughout this analysis, I have tried to create a balance between 
-
-
-
-This meta-analysis consists of using data that violates almost all basic assumption of general statistical methods and will require and use uncommon methods to do so. 
-
-
-
-
-
-This data has been mostly given in medians and has been indicated in the articles as doing so because of the violations of normality (i.e., probability density functions are not normally distributed). Instead of converting the medians into means when we indeed have been told there are violations in the basic assumptions, we will use an approach that instead uses medians as the summary statistic throughout this meta-analysis. Measures of variability are often given in Median Absolute Deviation (MAD) 
-
-
-### Problems:  
-
-* Non-independent data  
-* Doing a meta-analysis is multilevel in itself  
-* Trend over time is important  
-* Most of the studies are 3 groups (not so simple to do median difference)  
-* Summary statistics are given in mostly median and MAD  
-* Each study is over a period of time and the time is not the exact same (do I aggregate this by week?)  
-* Males and females are known to have differences (who actually knows) but not all of these data sets are males or females  
-
-
-
-
-## Dependent Measure  
-
-* Intake of Ethanol mg/kg/session  
-
-
-
-
-## Articles  
-
-### Comasco et al., 2015:  
-
-* Summary statistics given: Median, Min, Max  
-* Rats had access to ethanol three days a week 
-
-```{r}
-# Table S2: 
 Comasco2015 = tibble::tibble(
   "Week" = c(1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6),
   "Group" = c("AFR", "AFR", "AFR", "AFR", "AFR", "AFR", "MS15", "MS15", "MS15", "MS15", "MS15", "MS15", "MS360", "MS360", "MS360", "MS360", "MS360", "MS360"),
@@ -65,43 +21,21 @@ Comasco2015 = tibble::tibble(
   "b" = c(4.16, 0.75, 2.11, 1.42, 2.08, 1.66, 3.40, 0.99, 1.61, 2.13, 1.74, 1.77, 3.28, 1.14, 1.98, 2.15, 2.52, 2.05),
   "n" = c(11, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 20),
   "Sessions" = c(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3))
-```
-
-
-
-```{r}
-Comasco2015 = left_join(Comasco2015, values, by = "n")
 Comasco2015 = Comasco2015 |>
   mutate(
     Estimated_Mean = (a+2*Median+b)/(4),
     Estimated_SD = ((b - a)/(2 * qnorm((n-0.375)/(n+0.25)))),
     Estimated_Variance = (Estimated_SD)^2
   )
-```
 
+############################################################
 
-### Gustafsson & Nylander, 2006  
-
-* Summary statistics given: individual points from plots   
-* Total Ethanol Intake kg/day  
-* four bottle voluntary choice procedure  
-* Intake for each animal calculated every 3 days  
-* AFR = 13, MS15 = 15, MS360 = 25  
-
-
-```{r}
 GN2006 <- read_excel("G&N2006.xlsx")
 GN2006 |> group_by(Phase, Group) |> summarise(mean = mean(Ethanol_Intake),
                                               sd = sd(Ethanol_Intake),
                                               variance = var(Ethanol_Intake))
-```
 
-
-### Ploj et al., 2003  
-
-* Summary statistics: Mean and SD by concentration from plots  
-
-```{r}
+############################################################
 P2003 <- read_excel("P2003.xlsx")
 
 Sessions = tibble::tibble(Ethanol_Percentage = c(2, 4, 6, 8),
@@ -112,22 +46,9 @@ P2003 = left_join(P2003, Sessions, by = "Ethanol_Percentage")
 
 P2003 = P2003 |> mutate(SD = SEM*sqrt(n),
                         variance = SD^2)
-```
 
+############################################################
 
-
-### Oreland et al., 2011  
-
-* Summary statistics: Q1, Median, and Q3 from plots  
-
-$a$ = the minimum value  
-$q_1$ = the first quartile  
-$m$ = median  
-$q_3$ = the third quartile  
-$b$ = the maximum value  
-$n$ = sample size  
-
-```{r}
 O2011 <- read_excel("O2011.xlsx")
 O2011 = O2011 |> pivot_wider(names_from = Summary_Statistics, values_from = Values)
 
@@ -138,31 +59,15 @@ O2011 = O2011 |> mutate(
   Estimated_Variance = (Estimated_SD)^2
 )
 
-```
+############################################################
 
-
-### Gustafsson et al., 2007  
-
-* Summary statistics: Individual total ethanol intake from plots  
-* Continuous access to all four bottles (one is water)  
-
-```{r}
 G2007 <- read_excel("G2007.xlsx")
 G2007 |> group_by(Group, Days) |> summarise(Mean = mean(Mean_Ethanol_Intake),
                                             SD = sd(Mean_Ethanol_Intake), 
                                             Variance = var(Mean_Ethanol_Intake))
-```
 
+############################################################
 
-
-
-### Daoura et al., 2011  
-
-* Summary statistics: Median and interquartile range  
-
-
-
-```{r}
 Daoura2011 = tibble::tibble(
   "Group" = c("MS0", "MS0", "MS0", "MS0", "MS0",
               "MS15", "MS15", "MS15", "MS15", "MS15",
@@ -192,18 +97,8 @@ Daoura2011 |>
     Estimated_Variance = Estimated_SD^2
   )
 
+############################################################
 
-
-```
-
-
-
-## Lundberg et al., 2017  
-
-* Full data set sent  
-* tested 3 days a week for 20 weeks  
-
-```{r}
 L2017 <- read_excel("L2017.xlsx") 
 
 L2017 |> select(c(1:22)) |>
@@ -233,19 +128,35 @@ L2017 = L2017 |> select(c(1:22)) |>
             sd = sd(Intake_Session),
             variance = var(Intake_Session))
 
+############################################################
+
 ```
 
 
 
+```{=tex}
+\begin{align*}
+y_{it} \sim N(\theta_{it}, \sigma^{2}_{it}) \quad \alpha_i \sim N(0, 100000) \\
+\theta_{it} = \alpha_i + \beta_{i} \cdot time_{it} \quad \mu \sim N(0, 100000) \\
+\beta_{i} \sim N(\mu, \tau^2) \quad \tau \sim N(0, 100), \: \tau >0
+\end{align*}
+```
+
+
+
+$y_{it} =$ observed effect at time-point t in study i  
+$\sigma^2_{it} =$ is the variance of $y_{it}$  
+$\theta_{it} =$ is the true effect at time point t in study i  
+$\alpha_i \: and \: \beta_i =$ respectively, the intercept and slope for the study-specific linear regression slope   
+$time_{it} =$ the time-point in study i at time t  
+$\mu =$ overall trend  
+$\tau^2 =$ is the variance in trend between studies  
 
 
 
 
 
 
-
-
-
-
-
+time-points = 
+study i
 
