@@ -158,7 +158,7 @@ window.Quarto = {
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="do">############################################################</span></span>
 <span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>GN2006 <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="st">"G&amp;N2006.xlsx"</span>)</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>GN2006 <span class="sc">|&gt;</span> <span class="fu">group_by</span>(Phase, Group) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">mean =</span> <span class="fu">mean</span>(Ethanol_Intake),</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>GN2006 <span class="ot">=</span> GN2006 <span class="sc">|&gt;</span> <span class="fu">group_by</span>(Phase, Group) <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">mean =</span> <span class="fu">mean</span>(Ethanol_Intake),</span>
 <span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>                                              <span class="at">sd =</span> <span class="fu">sd</span>(Ethanol_Intake),</span>
 <span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>                                              <span class="at">variance =</span> <span class="fu">var</span>(Ethanol_Intake))</span>
 <span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
@@ -269,6 +269,74 @@ y_{it} \sim N(\theta_{it}, \sigma^{2}_{it}) \quad \alpha_i \sim N(0, 100000) \\
 <span class="math inline">\(time_{it} =\)</span> the time-point in study i at time t<br>
 <span class="math inline">\(\mu =\)</span> overall trend<br>
 <span class="math inline">\(\tau^2 =\)</span> is the variance in trend between studies</p>
+<p>Comasco et al., 2015: weeks 1-5 (increasing)<br>
+Daoura et al., 2011: weeks 1-5 (not increasing)<br>
+Gustafsson et al., 2007: days 1-18, 19-36, 37-54 (not increasing)<br>
+Lundberg et al., 2017: weeks 1-20 (increasing)<br>
+Oreland et al., 2011: week 3-7 (increasing)<br>
+Ploj et al., 2003: days 4, 4, 7, 11 (not increasing)<br>
+Gustafsson &amp; Nylander, 2006: days 1-18, 19-36, 37-54 (not increasing)</p>
+<section id="table-1" class="level2">
+<h2 class="anchored" data-anchor-id="table-1">Table 1</h2>
+<section id="model-1-grouping-to-fit-by-time" class="level3">
+<h3 class="anchored" data-anchor-id="model-1-grouping-to-fit-by-time">Model 1 grouping to fit by time</h3>
+<table class="table">
+<colgroup>
+<col style="width: 44%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Article</th>
+<th style="text-align: center;">Time-Point 1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Comasco et al., 2015</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="even">
+<td>Daoura et al., 2011</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td>Gustafsson et al., 2007</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="even">
+<td>Lundberg et al., 2017</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td>Oreland et al., 2011</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="even">
+<td>Ploj et al., 2003</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td>Gustafsson &amp; Nylander, 2006</td>
+<td style="text-align: center;"></td>
+</tr>
+</tbody>
+</table>
+<div id="tbl-tex" class="quarto-float anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-tex-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Caption
+</figcaption>
+<div aria-describedby="tbl-tex-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+
+</div>
+</figure>
+</div>
+<p>See <a href="#tbl-tex" class="quarto-xref">Table&nbsp;1</a>:</p>
+<p>time-points = {week1, week2, week3, week4, week5, week6, week7, week8}<br>
+study i</p>
+</section>
+</section>
 
 </main>
 <!-- /main column -->

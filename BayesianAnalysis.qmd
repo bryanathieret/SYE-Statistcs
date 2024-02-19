@@ -1,7 +1,7 @@
 ---
 title: "Bayes Methods"
 author: "Bryana A.S. Thieret"
-format: html
+format: pdf
 ---
 
 
@@ -31,7 +31,7 @@ Comasco2015 = Comasco2015 |>
 ############################################################
 
 GN2006 <- read_excel("G&N2006.xlsx")
-GN2006 |> group_by(Phase, Group) |> summarise(mean = mean(Ethanol_Intake),
+GN2006 = GN2006 |> group_by(Phase, Group) |> summarise(mean = mean(Ethanol_Intake),
                                               sd = sd(Ethanol_Intake),
                                               variance = var(Ethanol_Intake))
 
@@ -154,9 +154,53 @@ $\tau^2 =$ is the variance in trend between studies
 
 
 
+Comasco et al., 2015: weeks 1-5 (increasing)   
+Daoura et al., 2011: weeks 1-5 (not increasing)  
+Gustafsson et al., 2007: days 1-18, 19-36, 37-54 (not increasing)   
+Lundberg et al., 2017: weeks 1-20 (increasing)  
+Oreland et al., 2011: week 3-7 (increasing)  
+Ploj et al., 2003: days 4, 4, 7, 11 (not increasing)  
+Gustafsson & Nylander, 2006: days 1-18, 19-36, 37-54 (not increasing)    
+
+# Analaysis 1: 
+
+## Table 1: Groupings for Analysis 1  
+
+```{=latex}
+{\tiny
+\centering
+\begin{tabular}{lllllllll}
+\hline
+Article & Time-Point 1 & Time-Point 2 & Time-Point 3 & Time-Point 4 & Time-Point 5 & Time-Point 6 & Time-Point 7 \\
+\hline
+Comasco et al., 2015 & week 1 & week 2 & week 3 & week 4 & week 5 & NA & NA \\
+Daoura et al., 2011 & week 1 & week 2 & week 3 & week 4 & week 5 & NA & NA \\
+Gustafsson et al., 2007 & NA & days 1-18 & NA & days 19-36 & NA & days 37-54 & NA\\
+Lundberg et al., 2017 & week 1 & week 2 & week 3 & week 4 & week 5 & week 6 & week 7 \\
+Oreland et al., 2011 & NA & NA & week 3 & week 4 & week 5 & week 6 & week 7 \\
+Ploj et al., 2003 & 4 days & 4 days & 7 days & 11 days & NA & NA & NA \\
+Gustafsson \& Nylander, 2006 & NA & days 1-18 & NA & days 19-36 & NA & days 37-54 & NA \\
+\hline
+\end{tabular}}
+```
+
+* This analysis groups together both sexes and increasing ethanonl percentage with those that are not increasing.  
+
+
+time-points = {time-point 1, time-point 2, time-point 3, time-point 4, time-point 5, time-point 6, time-point 7}   
+study i = {C2015, D2011, G2007, L2017, O2011, P2003, GN2006}  
 
 
 
-time-points = 
-study i
+
+
+
+
+
+
+
+
+
+
+
 
