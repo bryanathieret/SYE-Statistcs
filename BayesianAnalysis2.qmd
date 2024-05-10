@@ -1,0 +1,1630 @@
+---
+title: "Bayesian Analysis 2"
+author: "Bryana A.S. Thieret"
+format: pdf
+---
+
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(rjags)
+library(runjags)
+library(R2jags)
+library(lattice)
+library(mcmcplots)
+library(strex)
+```
+
+
+
+```{r warning=FALSE, output=FALSE}
+C2015 = tibble::tibble(
+  "Week" = c(1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6),
+  "Group" = c("AFR", "AFR", "AFR", "AFR", "AFR", "AFR", "MS15", "MS15", "MS15", "MS15", "MS15", "MS15", "MS360", "MS360", "MS360", "MS360", "MS360", "MS360"),
+  "Ethanol_Percentage" = c(5, 5, 20, 20, 20, 20, 5, 5, 20, 20, 20, 20, 5, 5, 20, 20, 20, 20),
+  "Access_Hours" = c(24, 2, 2, 2, 2, 2, 24, 2, 2, 2, 2, 2, 24, 2, 2, 2, 2, 2),
+  "Median" = c(1.61, 0.40, 1.10, 1.21, 1.37, 1.18, 1.89, 0.67, 1.12, 1.49, 1.23, 1.32, 1.53, 0.57, 1.20, 1.11, 1.28, 1.32),
+  "a" = c(0.29, 0.18, 0.50, 0.59, 0.77, 0.62, 0.87, 0.32, 0.75, 0.89, 1.05, 0.39, 0.21, 0.09, 0.29, 0.56, 0.38, 0.60),
+  "b" = c(4.16, 0.75, 2.11, 1.42, 2.08, 1.66, 3.40, 0.99, 1.61, 2.13, 1.74, 1.77, 3.28, 1.14, 1.98, 2.15, 2.52, 2.05),
+  "n" = c(11, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 20),
+  "Sessions" = c(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3))
+C2015 = C2015 |>
+  mutate(
+    Estimated_Mean = (a+2*Median+b)/(4),
+    Estimated_SD = ((b - a)/(2 * qnorm((n-0.375)/(n+0.25)))),
+    Estimated_Variance = (Estimated_SD)^2
+  )
+
+
+C2015 |> filter(Group != "AFR") |> mutate(article = "C2015") |> mutate(Group = factor(Group)) |> select(article, Week, Group, Ethanol_Percentage, Estimated_Mean, Estimated_Variance, n)
+
+control = C2015 |> filter(Group != "AFR") |> slice(1:6) |> select(Week, n, Estimated_Mean, Estimated_SD) |> rename("Estimated_Mean_2" = Estimated_Mean,
+                                                                                           "n_2" = n, "Estimated_SD_2" = Estimated_SD)
+ms = C2015 |> filter(Group != "AFR") |> slice(7:12) |> select(Week, n, Estimated_Mean, Estimated_SD) |> rename("Estimated_Mean_1" = Estimated_Mean,
+                                                                                           "n_1" = n, "Estimated_SD_1" = Estimated_SD)
+
+C15 = left_join(ms, control) |> 
+  mutate(article = "C2015") |> 
+  mutate(mean_diff = Estimated_Mean_1 - Estimated_Mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*Estimated_SD_1^2 + (n_2 - 1)*Estimated_SD_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |> select(article, Week, mean_diff, pooled_SD, yij) |>
+  rename("timepoint" = Week)
+```
+
+
+```{r warning=FALSE, output=FALSE}
+
+GN2006 <- read_excel("G&N2006.xlsx")
+GN2006 = GN2006 |> group_by(Phase, Group) |> summarise(mean = mean(Ethanol_Intake),
+                                              sd = sd(Ethanol_Intake),
+                                              variance = var(Ethanol_Intake), 
+                                              n = n()) 
+
+control = GN2006 |> filter(Group == "MS15") |> rename("mean_2" = mean,
+                                            "sd_2" = sd, "n_2" = n) |> 
+  select(-variance, -Group)
+
+ms = GN2006 |> filter(Group == "MS360") |> rename("mean_1" = mean,
+                                            "sd_1" = sd, "n_1" = n) |> 
+  select(-variance, -Group)
+
+GN06 = left_join(ms, control, by = "Phase") |>
+  mutate(article = "GN2006") |> 
+  mutate(mean_diff = mean_1 - mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*sd_1^2 + (n_2 - 1)*sd_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |>
+  mutate(timepoint = case_when(
+    Phase == "Acquisition" ~ 2,
+    Phase == "Maintenance" ~ 4,
+    Phase == "Stabilization" ~ 6
+  )) |> select(article, mean_diff, pooled_SD, yij, timepoint)
+
+```
+
+
+```{r warning=FALSE, output=FALSE}
+P2003 <- read_excel("P2003.xlsx")
+
+Sessions = tibble::tibble(Ethanol_Percentage = c(2, 4, 6, 8),
+               Sessions = c(4, 4, 7, 11),
+               n = c(8, 8, 8, 8))
+
+P2003 = left_join(P2003, Sessions, by = "Ethanol_Percentage")
+
+P2003 = P2003 |> mutate(SD = SEM*sqrt(n),
+                        variance = SD^2)
+
+control = P2003 |> filter(Group == "MS15") |> rename("mean_2" = Mean,
+                                            "sd_2" = SD, "n_2" = n) |> 
+  select(-variance, -Group, -Upper_Point, -SEM, -Sessions)
+
+ms = P2003 |> filter(Group == "MS360") |> rename("mean_1" = Mean,
+                                            "sd_1" = SD, "n_1" = n) |> 
+  select(-variance, -Group, -Upper_Point, -SEM, -Sessions)
+
+P03 = left_join(ms, control) |>
+  mutate(article = "P2003") |> 
+  mutate(mean_diff = mean_1 - mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*sd_1^2 + (n_2 - 1)*sd_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |> select(article, mean_diff, pooled_SD, yij) |>
+  mutate(timepoint = c(1, 2, 3, 4))
+
+```
+
+
+```{r warning=FALSE, output=FALSE}
+O2011 <- read_excel("O2011.xlsx")
+O2011 = O2011 |> pivot_wider(names_from = Summary_Statistics, values_from = Values)
+
+# estimated mean and SD from Wan et al., 2014
+O2011 = O2011 |> mutate(
+  Estimated_Mean = ((Minimum + 2*IQR1 + 2*Median + 2*IQR3 + Maximum)/8),
+  Estimated_SD = (((Maximum - Minimum)/(4*qnorm((n-0.375)/(n+0.25)))) + ((IQR3-IQR1)/(4*qnorm((0.75*n-0.125)/(n+0.25))))),
+  Estimated_Variance = (Estimated_SD)^2
+) 
+
+control = O2011 |> filter(Group == "MS15") |> rename("mean_2" = Estimated_Mean,
+                                            "sd_2" = Estimated_SD, "n_2" = n) |> 
+  select(-Estimated_Variance, -Group, -Sessions, -Maximum, -IQR3, -IQR1, -Ethanol_Percentage, -Minimum, -Median)
+
+ms = O2011 |> filter(Group == "MS360") |> rename("mean_1" = Estimated_Mean,
+                                            "sd_1" = Estimated_SD, "n_1" = n) |> 
+  select(-Estimated_Variance, -Group, -Sessions, -Maximum, -IQR3, -IQR1, -Ethanol_Percentage, -Minimum, -Median) 
+  
+O11 = left_join(ms, control) |>
+  mutate(article = "O2011") |> 
+  mutate(mean_diff = mean_1 - mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*sd_1^2 + (n_2 - 1)*sd_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |> select(article, mean_diff, pooled_SD, yij, Week) |>
+    rename("timepoint" = Week)
+  
+```
+
+
+```{r warning=FALSE, output=FALSE}
+G2007 <- G
+G2007 = G2007 |> group_by(Group, Days) |> summarise(Mean = mean(Mean_Ethanol_Intake),
+                                            SD = sd(Mean_Ethanol_Intake), 
+                                            Variance = var(Mean_Ethanol_Intake),
+                                            n = n())
+
+control = G2007 |> filter(Group == "MS15") |> rename("mean_2" = Mean,
+                                            "sd_2" = SD, "n_2" = n) |> select(-Variance, -Group)
+  
+ms = G2007 |> filter(Group == "MS360") |> rename("mean_1" = Mean,
+                                            "sd_1" = SD, "n_1" = n) |> select(-Variance, -Group)
+
+
+
+G07 = left_join(ms, control, by = "Days") |>
+  mutate(article = "G2007") |> 
+  mutate(mean_diff = mean_1 - mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*sd_1^2 + (n_2 - 1)*sd_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |> select(article, mean_diff, pooled_SD, yij, Days) |>
+    mutate(timepoint = case_when(
+      Days == "1-18" ~ 2,
+      Days == "19-36" ~ 4,
+      Days == "37-54" ~ 6
+    )) |> select(-Days)
+
+```
+
+
+```{r warning=FALSE, output=FALSE}
+Daoura2011 = tibble::tibble(
+  "Group" = c("MS0", "MS0", "MS0", "MS0", "MS0",
+              "MS15", "MS15", "MS15", "MS15", "MS15",
+              "MS360", "MS360", "MS360", "MS360", "MS360"),
+  "Week" = c(1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5),
+  "Median" = c(1.97, 1.71, 2.08, 2.58, 1.74, 
+               1.64, 1.75, 1.73, 1.84, 1.83,
+               1.69, 1.90, 1.62, 2.40, 2.72),
+  "IQR" = c(1.14, 2.27, 1.83, 2.35, 1.79,
+            1.11, 2.42, 1.59, 1.85, 1.49,
+            0.58, 1.63, 2.36, 2.14, 1.67),
+  "n" = c(15, 15, 15, 15, 15, 
+          15, 15, 15, 15, 15,
+          14, 14, 14, 14, 14)
+)
+
+Daoura2011 = Daoura2011 |> mutate(
+  "IQR1" = Median - (IQR/2),
+  "IQR3" = Median + (IQR/2)
+)
+
+# C3 method 
+Daoura2011 = Daoura2011 |>
+  mutate(
+    Estimated_Mean = ((IQR1+Median+IQR3)/3),
+    Estimated_SD = ((IQR3-IQR1)/(2*qnorm((0.75*n-0.125)/(n+0.25)))),
+    Estimated_Variance = Estimated_SD^2
+  )
+
+control = Daoura2011 |> filter(Group == "MS15") |> rename("mean_2" = Estimated_Mean,
+                                            "sd_2" = Estimated_SD, "n_2" = n) |> select(Week, n_2, mean_2, sd_2)
+
+ms = Daoura2011 |> filter(Group == "MS360") |> rename("mean_1" = Estimated_Mean,
+                                            "sd_1" = Estimated_SD, "n_1" = n) |> select(Week, n_1, mean_1, sd_1)
+
+
+D11 = left_join(ms, control) |>
+  mutate(article = "D11") |> 
+  mutate(mean_diff = mean_1 - mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*sd_1^2 + (n_2 - 1)*sd_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |> select(article, Week, mean_diff, pooled_SD, yij) |>
+  rename("timepoint" = Week)
+```
+
+
+```{r warning=FALSE, output=FALSE}
+L2017 <- read_excel("L2017.xlsx") 
+
+L2017 |> select(c(1:22)) |>
+  pivot_longer(c(5:22), names_to = "Week", values_to = "Amount") |>
+  mutate(Sessions = 3,
+         Intake_Session = Amount/Sessions) |>
+  group_by(Rearing, Supplier, Week) |>
+  summarise(mean = mean(Intake_Session),
+            sd = sd(Intake_Session))
+
+diff_supplier = L2017 |> select(c(1:22)) |>
+  pivot_longer(c(5:22), names_to = "Week", values_to = "Amount") |>
+  mutate(Sessions = 3,
+         Intake_Session = Amount/Sessions)
+
+dif = lm(Intake_Session ~ Week*Supplier*Rearing, data = diff_supplier)
+summary(dif) # no difference between suppliers and intake of ethanol (I can combine these)
+
+
+L2017 = L2017 |> select(c(1:22)) |>
+  pivot_longer(c(5:22), names_to = "Week", values_to = "Amount") |>
+  filter(!is.na(Amount)) |>
+  mutate(Sessions = 3,
+         Intake_Session = Amount/Sessions) |>
+  group_by(Rearing, Week) |>
+  summarise(mean = mean(Intake_Session),
+            sd = sd(Intake_Session),
+            variance = var(Intake_Session))
+
+control = L2017 |> filter(Rearing == "MS15") |> 
+  slice(1:12) |> mutate(n = 10) |>
+  rename("mean_2" = mean, "sd_2" = sd, "n_2" = n) |> select(Week, mean_2, sd_2, n_2)
+
+
+ms = L2017 |> filter(Rearing == "MS360") |> 
+  slice(1:12) |> mutate(n = 10) |>
+  rename("mean_1" = mean, "sd_1" = sd, "n_1" = n) |> select(Week, mean_1, sd_1, n_1)
+
+
+L17 = left_join(ms, control, by = "Week") |>
+  mutate(article = "L2017") |> 
+  mutate(mean_diff = mean_1 - mean_2,
+         pooled_SD = sqrt(((n_1 - 1)*sd_1^2 + (n_2 - 1)*sd_2^2) / (n_1+n_2 - 2)),
+         yij = mean_diff/pooled_SD) |> select(article, mean_diff, pooled_SD, yij, Week) |>
+  mutate(timepoint = case_when(
+    Week == "Intake W1" ~ 1,
+    Week == "Intake W2" ~ 2,
+    Week == "Intake W3" ~ 3, 
+    Week == "Intake W4" ~ 4,
+    Week == "Intake W5" ~ 5,
+    Week == "Intake W6" ~ 6,
+    Week == "Intake W7" ~ 7,
+    Week == "Intake W8" ~ 8,
+    Week == "Intake W9" ~ 9,
+    Week == "Intake W10" ~ 10, 
+    Week == "Intake W11" ~ 11,
+    Week == "Intake W12" ~ 12,
+    Week == "Intake W13" ~ 13,
+    Week == "Intake W14" ~ 14
+    
+  )) |> select(-Week)
+
+```
+
+
+```{r}
+full = full_join(full_join(full_join(full_join(full_join(full_join(L17, O11), P03), G07), GN06), D11), C15) |> select(-Phase) |> filter(timepoint <= 7)
+
+mean.diff = full |> select(-pooled_SD, -yij) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+
+
+```
+
+
+
+```{r worse model}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+beta2[i]*increasing[i]
+              }
+          beta1[i] ~ dnorm(beta.p, tau)
+          beta2[i] ~ dnorm(beta.p, tau)
+          
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model11.txt")
+
+
+
+jags11 = jags(model.file = 'model11.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing), parameters.to.save = c("beta1", "beta2", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags11)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut11 = tibble(as.data.frame(as.matrix(jags11$summary)))
+
+betam2 = jagsOut11 |> slice(1:14) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]", "beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6)) 
+
+betam2 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  geom_line(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam2 = jagsOut11 |> slice(15:46) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam2 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam2 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam2 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  geom_hline(yintercept = 0)
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam2$sd
+y_i11 = thetam2$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.0009060428
+I11 = (H1^2-1)/H1^2
+I11^2
+
+
+
+```
+
+
+
+```{r}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+beta2[i]*time_period[i, j]^2
+              }
+          beta1[i] ~ dnorm(beta.p, tau)    
+          beta2[i] ~ dnorm(beta.p, tau) 
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model12.txt")
+
+
+
+jags12 = jags(model.file = 'model12.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period), parameters.to.save = c("beta1", "beta2", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags12)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut12 = tibble(as.data.frame(as.matrix(jags12$summary)))
+
+betam2 = jagsOut12 |> slice(1:14) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]", "beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6)) 
+
+betam2 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  geom_line(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+
+thetam2 = jagsOut12 |> slice(8:39) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam2 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam2 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam2 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam2$sd
+y_i11 = thetam2$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.0009531786
+I11 = (H1^2-1)/H1^2
+I11^2
+
+```
+
+
+
+```{r}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+beta2[i]*(time_period[i, j])^2+beta3[i]*increasing[i]
+              }
+          beta1[i] ~ dnorm(beta.p, tau)        
+          beta2[i] ~ dnorm(beta.p, tau)  
+          beta3[i] ~ dnorm(beta.p, tau)  
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model13.txt")
+
+
+
+jags13 = jags(model.file = 'model13.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing), parameters.to.save = c("beta1", "beta2", "beta3", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags13)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut13 = tibble(as.data.frame(as.matrix(jags13$summary)))
+
+betam3 = jagsOut13 |> slice(1:7) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6))
+
+betam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  #geom_line(aes(group = group)) +
+  geom_smooth(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam3 = jagsOut13 |> slice(22:53) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  facet_wrap(~increasing)
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam3$sd
+y_i11 = thetam3$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.002754129
+I11 = (H1^2-1)/H1^2
+I11^2
+
+```
+
+
+
+
+
+```{r}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+
+                              beta2[i]*(time_period[i, j])^2+
+                              beta3[i]*increasing[i]+
+                              beta4[i]*(increasing[i])^2
+              }
+          beta1[i] ~ dnorm(beta.p, tau)        
+          beta2[i] ~ dnorm(beta.p, tau)  
+          beta3[i] ~ dnorm(beta.p, tau)  
+          beta4[i] ~ dnorm(beta.p, tau)  
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model14.txt")
+
+
+
+jags14 = jags(model.file = 'model14.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing), parameters.to.save = c("beta1", "beta2", "beta3","beta4", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags13)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut14 = tibble(as.data.frame(as.matrix(jags14$summary)))
+
+betam3 = jagsOut13 |> slice(1:7) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6))
+
+betam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  #geom_line(aes(group = group)) +
+  geom_smooth(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam3 = jagsOut14 |> slice(29:60) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  facet_wrap(~increasing)
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam3$sd
+y_i11 = thetam3$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.002299234
+I11 = (H1^2-1)/H1^2
+I11^2
+```
+
+
+```{r mod 5}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+
+                              beta2[i]*increasing[i]+
+                              beta3[i]*(time_period[i, j] * increasing[i])
+              }
+          beta1[i] ~ dnorm(beta.p, tau)        
+          beta2[i] ~ dnorm(beta.p, tau)  
+          beta3[i] ~ dnorm(beta.p, tau)  
+ 
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model15.txt")
+
+
+
+jags15 = jags(model.file = 'model15.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing), parameters.to.save = c("beta1", "beta2", "beta3", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags13)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut15 = tibble(as.data.frame(as.matrix(jags15$summary)))
+
+betam3 = jagsOut13 |> slice(1:7) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6))
+
+betam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  #geom_line(aes(group = group)) +
+  geom_smooth(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam3 = jagsOut15 |> slice(22:53) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  facet_wrap(~increasing)
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam3$sd
+y_i11 = thetam3$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.000946106
+I11 = (H1^2-1)/H1^2
+I11^2
+```
+
+
+
+```{r, mod 6}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+
+                              beta2[i]*(time_period[i, j])^2+
+                              beta3[i]*increasing[i]+
+                              beta4[i]*(time_period[i, j] * increasing[i])
+              }
+          beta1[i] ~ dnorm(beta.p, tau)        
+          beta2[i] ~ dnorm(beta.p, tau)  
+          beta3[i] ~ dnorm(beta.p, tau)  
+          beta4[i] ~ dnorm(beta.p, tau)  
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model16.txt")
+
+
+
+jags16 = jags(model.file = 'model16.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing), parameters.to.save = c("beta1", "beta2", "beta3","beta4", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags13)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut16 = tibble(as.data.frame(as.matrix(jags16$summary)))
+
+betam3 = jagsOut13 |> slice(1:7) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6))
+
+betam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  #geom_line(aes(group = group)) +
+  geom_smooth(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam3 = jagsOut16 |> slice(29:60) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  facet_wrap(~increasing)
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam3$sd
+y_i11 = thetam3$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.003203844
+I11 = (H1^2-1)/H1^2
+I11^2
+```
+
+
+```{r mod 7}
+# data
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+steady = c(1, 0, 0, 1, 1, 1, 0)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+
+                              beta2[i]*(time_period[i, j])^2+
+                              beta3[i]*increasing[i]+
+                              beta4[i]*steady[i]
+              }
+          beta1[i] ~ dnorm(beta.p, tau)        
+          beta2[i] ~ dnorm(beta.p, tau)  
+          beta3[i] ~ dnorm(beta.p, tau)  
+          beta4[i] ~ dnorm(beta.p, tau)  
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model17.txt")
+
+
+
+jags17 = jags(model.file = 'model17.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing, 'steady' = steady), parameters.to.save = c("beta1", "beta2", "beta3","beta4", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags17)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut17 = tibble(as.data.frame(as.matrix(jags17$summary)))
+
+betam3 = jagsOut13 |> slice(1:7) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6))
+
+betam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  #geom_line(aes(group = group)) +
+  geom_smooth(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam3 = jagsOut17 |> slice(29:60) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  facet_wrap(~increasing)
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam3$sd
+y_i11 = thetam3$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.003203844
+I11 = (H1^2-1)/H1^2
+I11^2
+```
+
+
+
+```{r mod 8}
+N = 7
+t = c(6, 5, 4, 3, 3, 5, 6)
+nChains = 4
+burnInSteps = 1000
+thinSteps = 50
+numSavedSteps = 5000
+nIter = ceiling((numSavedSteps * thinSteps)/nChains)
+mean.diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-pooled_SD, -yij, -sd_diff) |> pivot_wider(names_from = timepoint, values_from = mean_diff) |> select(-article) 
+mean.diff = as.matrix(mean.diff)
+mean.diff[is.na(mean.diff)] <- 0
+
+
+sd_diff = full |> mutate(timepoint = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  select(-mean_diff, -yij, -pooled_SD) |> pivot_wider(names_from = timepoint, values_from = sd_diff) |> select(-article)
+
+
+sd_diff = cbind(sd_diff)
+sd_diff = as.matrix(sd_diff)
+sd_diff[ is.na( sd_diff ) ] <- 0
+
+
+
+time_period = full |> 
+  select(-pooled_SD, -yij, -mean_diff, -sd_diff) |>
+  mutate(timeperiod = c(1, 2, 3, 4, 5, 6, 
+                             1, 2, 3, 4, 5, 
+                             1, 2, 3, 4, 
+                             1, 2, 3,
+                             1, 2, 3,
+                             1, 2, 3, 4, 5,
+                             1, 2, 3, 4, 5, 6)) |>
+  pivot_wider(names_from = timeperiod, values_from = timepoint) |> select(-article) 
+time_period = as.matrix(time_period)
+time_period[is.na(time_period)] <- 0
+
+
+
+params2 = c("beta", "tau", "theta")
+
+
+increasing = c(0, 1, 1, 0, 0, 0, 1)
+steady = c(1, 0, 0, 1, 1, 1, 0)
+
+
+params2 = c("beta", "tau", "theta", "mean.diff")
+
+params = c("beta")
+
+modelstring = "
+  model {
+      for(i in 1:N) {
+          for(j in 1:t[i]) {
+              mean.diff[i, j] ~ dnorm(theta[i, j], prec[i, j])
+              prec[i, j] <- 1/(sd_diff[i, j]* sd_diff[i, j])
+              theta[i, j] <- beta1[i]*time_period[i, j]+
+                              beta3[i]*increasing[i]+
+                              beta4[i]*steady[i]
+              }
+          beta1[i] ~ dnorm(beta.p, tau)        
+          beta2[i] ~ dnorm(beta.p, tau)  
+          beta3[i] ~ dnorm(beta.p, tau)  
+          beta4[i] ~ dnorm(beta.p, tau)  
+      }
+    beta.p ~ dnorm(0, 0.00001)
+    tau <- 1/vari
+    vari <- pow(sd, 2)
+    sd ~ dnorm(0, 0.01)I(0,)
+    pr.gr.zero <- step(beta.p) - equals(0, beta.p)
+    }"
+# writes to file: 
+writeLines(modelstring, con="model18.txt")
+
+
+
+jags18 = jags(model.file = 'model18.txt', data = list('t' = t, 'N' = N, 'mean.diff' = mean.diff, 'sd_diff' = sd_diff, 'time_period' = time_period, 'increasing' = increasing, 'steady' = steady), parameters.to.save = c("beta1", "beta2", "beta3","beta4", "theta"),n.chains = nChains, n.iter = nIter, n.burnin = burnInSteps, n.thin = thinSteps)
+print(jags18)
+
+
+
+#jagsOut = tibble(as.data.frame(as.matrix(jagsmod2.fit.mcmc)))
+jagsOut18 = tibble(as.data.frame(as.matrix(jags18$summary)))
+
+betam3 = jagsOut18 |> slice(1:7) |> mutate(stat = c("beta[1]", "beta[2]", "beta[3]", "beta[4]", "beta[5]", "beta[6]", "beta[7]")) |>
+  filter(mean != 0) |>
+  mutate(group = 1) |>
+  mutate(timepoint = str_elem(stat, 6))
+
+betam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean)) +
+  #geom_line(aes(group = group)) +
+  geom_smooth(aes(group = group)) +
+  labs(y = "Mean Beta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = group), alpha = 0.3) +
+  theme_minimal() 
+
+
+
+thetam3 = jagsOut18 |> slice(29:60) |>
+  mutate(stat = c("mean.diff[1,1]", "mean.diff[3,1]", "mean.diff[6,1]", "mean.diff[7,1]", "mean.diff[1,2]", "mean.diff[3,2]", "mean.diff[4,2]", "mean.diff[5,2]", "mean.diff[6,2]", "mean.diff[7,2]", "mean.diff[1,3]", "mean.diff[2,3]", "mean.diff[3,3]", "mean.diff[6,3]", "mean.diff[7,3]", "mean.diff[1,4]", "mean.diff[2,4]", "mean.diff[3,4]", "mean.diff[4,4]", "mean.diff[5,4]", "mean.diff[6,4]", "mean.diff[7,4]", "mean.diff[1,5]", "mean.diff[2,5]",
+"mean.diff[6,5]", "mean.diff[7,5]", "mean.diff[1,6]", "mean.diff[2,6]", "mean.diff[4,6]", "mean.diff[5,6]", "mean.diff[7,6]", "mean.diff[2,7]")) |> 
+  mutate(article = str_elem(stat, 11)) |>
+  mutate(timepoint = str_elem(stat, 13)) |> 
+  select(-stat) |> 
+  mutate(increasing = case_when(
+  article == 1 ~ "Steady",
+  article == 2 ~ "Increasing",
+  article == 3 ~ "Increasing", 
+  article == 4 ~ "Steady",
+  article == 5 ~ "Steady", 
+  article == 6 ~ "Steady",
+  article == 7 ~ "Increasing"
+))
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing)) +
+  geom_line(aes(group = article, col = increasing)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() +
+  facet_wrap(~increasing)
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean)) +
+  geom_point(aes(x = timepoint, y = mean, col = article)) +
+  geom_line(aes(group = article, col = article)) +
+  labs(y = "Mean theta") +
+  geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+
+
+thetam3 |> ggplot(aes(x = timepoint, y = mean, group = increasing)) +
+  geom_point(aes(x = timepoint, y = mean, col = increasing, group = increasing)) +
+  geom_smooth(aes(group = increasing, col = increasing, fill = increasing)) +
+  labs(y = "Mean theta") +
+  #geom_ribbon(aes(ymin = mean - sd, ymax = mean + sd, group = article), alpha = 0.3) +
+  theme_minimal() 
+#+
+  #facet_wrap(~increasing)
+
+
+w_i11 = thetam3$sd
+y_i11 = thetam3$mean
+mu_f11 = (sum(w_i11*y_i11)/sum(w_i11))
+Q11 = sum(w_i11*(y_i11-mu_f11)^2)
+
+H11 = Q11/6
+H11^2 #0.001305767
+I11 = (H1^2-1)/H1^2
+I11^2
+```
+
+
+
+
+

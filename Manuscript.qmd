@@ -59,10 +59,10 @@ $$y_{it} \sim N(\theta_{it}, \sigma^{2}_{it}) \quad \alpha_i \sim N(0, 100000) \
 
 ### Deriving Mean and Variance  
 
-
   As mentioned, the majority of summary statistics provided were given as median along with some type of deviation measure (e.g., IQR1, IQR3, IQR, minimum value, maximum value). A few approaches will be taken with this data to not narrow our ability to understand the different dimension of this data, but one of those methods includes the importance of trend over time. Wan et al. (2014) improved upon the methods both Hozo et al. (2005) and Bland et al. (2014) used to derive mean and standard deviation from median to specifically accommodate for smaller sample sizes and non-normal data.  
   
-When only minimum (*a*), median (*m*), and maximum (*b*) values are provided, mean ($\bar{x}$) and standard deviation (SD) was estimated through Equation 2. 
+When only minimum (*a*), median (*m*), and maximum (*b*) values are provided, mean ($\bar{x}$) and standard deviation (SD) was estimated through Equation 2.  
+
 
 
 

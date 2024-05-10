@@ -1,0 +1,82 @@
+---
+title: "multilevel diagram"
+format: html
+---
+
+
+```{r}
+library(tidyverse)
+library(ggraph)
+library(igraph)
+library(dendextend)
+library(vtree)
+
+
+```
+
+
+```{r}
+# libraries
+library(ggraph)
+library(igraph)
+library(tidyverse)
+ 
+# create a data frame 
+data <- data.frame(
+  level1="Composit Model",
+  level2=c( rep("level1",4), rep("level2",4)),
+  level3=paste0("mister_", letters[1:8])
+)
+ 
+# transform it to a edge list!
+edges_level1_2 <- data %>% select(level1, level2) %>% unique %>% rename(from=level1, to=level2)
+edges_level2_3 <- data %>% select(level2, level3) %>% unique %>% rename(from=level2, to=level3)
+
+edge_list=rbind(edges_level1_2, edges_level2_3)
+ 
+# Now we can plot that
+mygraph <- graph_from_data_frame( edge_list )
+ggraph(mygraph, layout = 'dendrogram', circular = FALSE) + 
+  geom_edge_diagonal(data = get_edges()) +
+  geom_node_point(size = 9, color = "white") +
+  geom_node_text(
+    aes(  label=c("Composite Model", "Level 1 Model", "Level 2 Model", LETTERS[8:1]) ), color = "black", family = "Avenir"
+    #hjust=c(1,0.5, 0.5, rep(0,8)), 
+    #nudge_y = c(-.02, 0, 0, rep(.02,8)),
+    #nudge_x = c(0, .3, .3, rep(0,8))
+  ) +
+  theme_void()
+```
+
+
+```{r}
+library(data.tree)
+
+Composite <- Node$new("Composite Model")
+  level1 <- Composite$AddChild("Level 1 Model")
+    software <- level1$AddChild("New Software")
+    standards <- level1$AddChild("New Accounting Standards")
+  level2 <- Composite$AddChild("Research")
+    newProductLine <- level2$AddChild("New Product Line")
+    newLabs <- level2$AddChild("New Labs")
+```
+
+```{r}
+print(Composite)
+plot(Composite)
+```
+
+
+
+
+```{r}
+tibble(
+  level1 = 
+)
+```
+
+
+
+
+
+

@@ -1,0 +1,142 @@
+---
+title: "Example"
+format: html
+---
+
+
+```{r}
+library(metadat) # package needed for the package "meta".
+library(metafor)
+library(tidyverse)
+library(ggbeeswarm)
+data <- dat.bangertdrowns2004 # data from metadat package from Wolfgang Viechtbauer
+data = data |> mutate(grade = as.factor(grade))
+```
+
+
+```{r}
+data |> select(-id, -minutes, -wic, -info, -pers, -imag, -meta, -feedback) |> slice(1:8)
+```
+
+
+The data set used is from the metadat package which evaluates effectiveness of writing-to-learning interventions in 48 studies.  
+
+In this multilevel analysis, we will use the standardized mean difference (bias-corrected) between a group of students that received instruction with increased emphasis on writing (i.e., intervention group) compared to another group of students that received standard instructions (i.e., control group). A difference value that was positive was indicative of higher levels of achievement for the intervention group while a negative value showed higher levels of achievement in the control group.  
+
+Lets say our main question for this meta-analysis is understanding for which subjects of teaching (e.g., math, literature, etc.,) show the intervention group to be more effective compared to the control and this changes over grades.  
+
+As we discussed previously, the level one model is the participants summary statistics, the level two model is the within-study variation, and the level three model is the between-study variation. In this case we only have two levels for our model because there is no within-study variation because I am using a data set that presents only the summary statistic difference and variance values for each study. 
+
+
+level one model (aggregated summary statistics):  
+$$\hat{\theta}_{k} = \theta_{k} + \epsilon_{k}$$
+level two model (studies): 
+
+$$\theta_k = \mu + u_k$$
+
+```{r}
+mod1 <- rma(yi, vi, mods = ~grade, data = data, digits = 4)
+mod1
+
+grade = tibble(data$grade) |> rename("grade" = `data$grade`) |> mutate(row = c(1:48))
+
+pred = blup(mod1)
+pred = as_tibble(data.frame(pred)) |> mutate(row = c(1:48)) |> rename("SE" = se)
+
+
+full = full_join(grade, pred) |> select(-row)
+
+
+full |> ggplot(aes(x = grade, y = pred)) + 
+  geom_boxplot(outliers = FALSE, aes(group = grade)) +
+  geom_beeswarm(aes(size = SE), cex = 4, shape = 21) +
+  geom_hline(yintercept = 0) +
+  theme_minimal() +
+  labs(y = "Standardized Mean Difference", x = "Grade") +
+  theme(
+    axis.line = element_line(color = "black", linewidth = 0.4),
+    legend.position = "top", 
+    legend.title = element_text(color = "black", size = 15, family = "Avenir"),
+    legend.text = element_text(color = "black", size = 12, family = "Avenir"),
+    axis.text = element_text(color = "black", size = 20, family = "Avenir"),
+    axis.title = element_text(color = "black", family = "Avenir", size = 25)
+  )
+
+```
+
+
+```{r}
+values = full |> group_by(grade) |> summarise(mean = mean(pred),
+                                     ub = mean(pi.ub),
+                                     lb = mean(pi.lb))
+  
+  
+full |> ggplot(aes(x = grade, y = pred)) + 
+  geom_boxplot(outliers = FALSE, aes(group = grade)) +
+  geom_beeswarm(aes(size = SE), cex = 4, shape = 21) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(data = values, aes(x = grade, y = mean)) +
+  theme_minimal() +
+  labs(y = "Standardized Mean Difference", x = "Grade") +
+  theme(
+    axis.line = element_line(color = "black", linewidth = 0.4),
+    legend.position = "top", 
+    legend.title = element_text(color = "black", size = 15, family = "Avenir"),
+    legend.text = element_text(color = "black", size = 12, family = "Avenir"),
+    axis.text = element_text(color = "black", size = 20, family = "Avenir"),
+    axis.title = element_text(color = "black", family = "Avenir", size = 25))
+```
+
+```{r}
+full |> ggplot(aes(x = grade, y = pred)) + 
+  geom_boxplot(outliers = FALSE, aes(group = grade)) +
+  geom_jitter(aes(size = SE), width = 0.25, shape = 21) +
+  geom_hline(yintercept = 0) +
+  theme_minimal() +
+  labs(y = "Standardized Mean Difference", x = "Grade") +
+  theme(
+    axis.line = element_line(color = "black", linewidth = 0.4),
+    legend.position = "top", 
+    legend.title = element_text(color = "black", size = 15, family = "Avenir"),
+    legend.text = element_text(color = "black", size = 12, family = "Avenir"),
+    axis.text = element_text(color = "black", size = 20, family = "Avenir"),
+    axis.title = element_text(color = "black", family = "Avenir", size = 25)
+  )
+```
+
+
+
+```{r}
+values |> ggplot(aes(x = grade, y = mean)) +
+  geom_point() +
+  geom_smooth(aes(group = mean))
+```
+
+
+
+
+```{r}
+one = regplot(mod1, mod = "grade", xlab = "Grade", pch = 21, bg = NA, labsize = 22, refline = 0)
+one
+```
+
+
+```{r}
+#example
+res <- rma(yi, vi, mods = ~ rcs(ablat,3)+year+alloc, data=dat)
+
+knots <- attr(rcs(model.matrix(res)[,2], 3), "parms")
+knots
+xs <- seq(10,60, length=500)
+sav <- predict(mod1, newmods=cbind(rcspline.eval(xs, knots, inclx=TRUE),colMeans(model.matrix(res))[4],
+                                  colMeans(model.matrix(res))[5],colMeans(model.matrix(res))[6]))
+tmp <- regplot(res, mod=2, pred=sav, xvals=xs, las=1, digits=1, bty="l",
+               psize=.20/sqrt(dat$vi), xlab="Predictor", main="Restricted Cubic Spline Model", transf=exp)
+abline(v=knots, lty="dotted")
+points(tmp)
+```
+
+
+
+
+
